@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "team_id": "contest2026_307_justdoit",
+  "github_login": "xz-xuzhen",
+  "generator": "claude-code-collector@1.3.0",
+  "updated_at": "2026-08-21T04:30:44.199Z",
+  "sessions": [
+    {
+      "session_id": "cf63973f-85f6-4b8c-8566-23183b0af250",
+      "tool": "claude-code",
+      "started_at": "2026-08-21T04:24:33.664Z",
+      "last_event_at": "2026-08-21T04:30:44.199Z",
+      "event_count": 47,
+      "raw_event_count": 67,
+      "file_path": "logs/xz-xuzhen/2026-08-21/claude-code__cf63973f-85f6-4b8c-8566-23183b0af250.jsonl",
+      "collection_mode": "cli",
+      "health": "ok",
+      "model": "mimo-v2.5-pro"
+    }
+  ]
+}
