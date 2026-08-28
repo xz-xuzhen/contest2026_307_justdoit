@@ -10,6 +10,9 @@
 
   <project path="contest2026_307_justdoit" name="contest2026_307_justdoit">
     <linkfile src="app/hello_app" dest="packages/demos/contest2026_307_hello_app"/>
+    <linkfile src="app/my_ai_tool" dest="packages/demos/contest2026_307_my_ai_tool"/>
+    <linkfile src="app/status_indicator" dest="packages/demos/contest2026_307_status_indicator"/>
+    <linkfile src="app/day2_ui" dest="packages/demos/contest2026_307_day2_ui"/>
     <linkfile src="quickapp/hello_quickapp" dest="packages/apps/contest2026_307_hello_quickapp"/>
     <linkfile src="board/contest_board" dest="vendor/openvela/boards/contest2026_307_board"/>
   </project>
