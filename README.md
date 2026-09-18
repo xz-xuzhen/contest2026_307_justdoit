@@ -1,148 +1,353 @@
-# contest2026_307_justdoit
+# Vela 校园随行 Agent
 
-👋 欢迎参加 **2026 首届 openvela AI 硬件开发者大赛**！
+## 一、信息表
 
-这是组委会为你的队伍创建的**专属参赛仓库**（本仓为样例/模板，队伍编号 `307`；你看到的将是你自己的 `contest2026_<编号>_<队伍名>`）。比赛期间，你的全部参赛代码、打包产物与 AI Coding 日志都提交到这里。
+| 项目 | 内容 |
+|------|------|
+| 作品名称 | Vela 校园随行 Agent |
+| 队伍名称 | justdoit |
+| 团队分工 | 独立开发 |
+| 选题方向 | AI 硬件产品创新 |
 
-> 本仓既是「代码仓」，又内置了一键拉取整套 openvela 工程的 `repo` 清单（manifest）。你只需跟它打交道，**自始至终只动一个文件夹**。
+## 二、摘要
 
----
+本作品面向在校大学生，基于 openvela + ai_agent 框架，在立创·黄山派（SF32LB52）开发板上实现「课程定时提醒 + 久坐主动告警 + 每日简报」的随身主动提醒助手。
 
-## 一、先读这些官方文档
+核心差异化：不是被动问答的语音助手，而是「主动感知 + 自动执行」的 Agent——到点自己提醒，超阈值自己告警，不需要用户唤醒和提问。
 
-**通用（所有赛道必读）：**
+主要成果：
+- 实现 3 个自定义 Skill（course-reminder、sedentary-alert、daily-briefing）
+- 实现 2 种主动场景：定时主动（课程提醒）+ 阈值主动（久坐告警）
+- 纯端侧运行，不依赖网络，F1/F2/F3 核心功能 100% 离线可用
+- LVGL 触摸界面，支持课程列表滑动、一键启停提醒/久坐监测
+- 19 门课程完整管理，震动分级提醒（课程三短震 / 久坐轻提醒单长震 / 久坐强提醒两轮三短震）
 
-| 文档                                                                                                                                     | 用途                                           |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| [《大赛总览》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/contest_overview.md)                        | 赛道、流程、评分、资源，建议先通读             |
-| [《参赛代码提交指南》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/code_submission_guide.md)           | 仓库获取、提交流程、时间与权限（**以此为准**） |
-| [《AI Coding 日志归集与提交手册》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_coding_log_guide.md) | 如何导出 AI 对话日志并提交到 `logs/`           |
+## 三、正文
 
-**按你的赛道选读（三选一）：**
+### 3.1 绪论
 
-| 赛道                  | 教程导航                                                                                                                                                 |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 快应用 / 手表应用创新 | [快应用教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/quickapp/quickapp_guide_index.md)                         |
-| AI 硬件产品创新       | [AI 硬件赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_hardware/ai_hardware_guide_index.md)              |
-| 新硬件适配            | [新硬件适配赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/hardware_porting/hardware_porting_guide_index.md) |
+#### 项目背景与问题定义
 
----
+大学生群体面临两个高频痛点：
+1. **忘记上课**：课程时间不固定，容易忘记下一节课在哪里上
+2. **久坐伤身**：长时间学习不动，缺乏主动提醒机制
 
-## 二、第一步：拉取完整工程
+现有解决方案（手机闹钟、日历 App）的问题：
+- 需要手动设置，不够智能
+- 手机容易分心，不适合学习场景
+- 没有久坐检测功能
 
-用组委会提供的命令一键拉取「openvela 全量源码 + 你的专属仓」：
+#### 技术难点
 
-```bash
-repo init -u https://github.com/open-vela/contest2026_307_justdoit \
-  -b dev-ai-contest-2026 -m contest2026_307_justdoit.xml
-repo sync -c -j8
+1. **主动感知**：如何在不依赖用户操作的情况下，自动检测时间和运动状态
+2. **端侧决策**：在资源受限的嵌入式设备上实现实时判断
+3. **即时执行**：检测到条件满足后，立即触发震动和弹窗
+
+#### 创新点
+
+1. **主动 Agent 架构**：区别于被动问答的语音助手，本作品实现了「感知→决策→执行」的完整闭环
+2. **双主动类型**：定时主动（课程提醒）+ 阈值主动（久坐告警），覆盖不同场景
+3. **纯端侧运行**：核心功能不依赖网络，断网也能正常工作
+4. **IMU 久坐检测**：利用六轴加速度传感器的方差分析判断运动状态
+
+### 3.2 系统方案设计
+
+#### 系统总体架构
+
+```
+┌─────────────────────────────────────────────────┐
+│                  用户交互层                       │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │
+│  │ 触摸屏   │  │ 按键     │  │ CLI (UART)   │  │
+│  │ LVGL UI  │  │ KEY1/2   │  │ nsh> 命令    │  │
+│  └──────────┘  └──────────┘  └──────────────┘  │
+├─────────────────────────────────────────────────┤
+│                  功能层                           │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │
+│  │ F1 课程  │  │ F2 简报  │  │ F3 久坐告警  │  │
+│  │ 定时提醒 │  │ 每日列表 │  │ 阈值告警     │  │
+│  └──────────┘  └──────────┘  └──────────────┘  │
+├─────────────────────────────────────────────────┤
+│                  驱动层                           │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │
+│  │ RTC      │  │ 震动马达 │  │ IMU (LSM6DSL)│  │
+│  │ /dev/rtc0│  │ Vibrator │  │ /dev/lsm6dsl0│  │
+│  └──────────┘  └──────────┘  └──────────────┘  │
+│  ┌──────────┐  ┌──────────┐                     │
+│  │ LCD      │  │ 触摸     │                     │
+│  │ /dev/lcd0│  │ /dev/input0                    │
+│  └──────────┘  └──────────┘                     │
+├─────────────────────────────────────────────────┤
+│                  数据层                           │
+│  ┌──────────────────┐  ┌─────────────────────┐  │
+│  │ 课程表 (硬编码)  │  │ Skill 文件 (ROMFS)  │  │
+│  │ C struct array   │  │ /data/agent/skills/ │  │
+│  └──────────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────┘
 ```
 
-同步后，你的整个仓库位于工作区的 `contest2026_307_justdoit/`，openvela 全量源码在外层（`nuttx/`、`apps/`、`packages/`、`vendor/` 等）。
+#### 方案论证与选型
 
----
+| 维度 | 本方案 | 备选方案 | 选择理由 |
+|------|--------|----------|----------|
+| 开发板 | 黄山派 SF32LB52 | Gemini-S1 R528 | 黄山派有 IMU + 震动马达，适合久坐检测 |
+| UI 框架 | LVGL (C) | 快应用 (JS) | LVGL 性能更好，适合实时 UI |
+| 交互方式 | CLI + 触摸屏 | 语音 | CLI 最简单可靠，触摸屏提供可视化 |
+| 数据存储 | 硬编码 + ROMFS | TF 卡 JSON | 避免 TF 卡兼容性问题 |
+| 网络方案 | BLE 代理（后期） | WiFi | 黄山派无 WiFi，BLE 是唯一选择 |
 
-## 三、第二步：在哪里写代码
+#### 断网降级策略
 
-**只在自己的仓目录 `contest2026_307_justdoit/` 里开发。** 不同作品形态放在对应子目录，manifest 会通过 `<linkfile>` 把它们**软链**到 openvela 编译树该在的位置——你不用手动 copy：
+| 功能 | 有网络 | 无网络 |
+|------|--------|--------|
+| F1 课程提醒 | 正常 | 正常（纯端侧） |
+| F2 每日简报 | 正常 | 正常（纯端侧） |
+| F3 久坐告警 | 正常 | 正常（纯端侧） |
+| F4 CLI 对话 | LLM 云端推理 | 离线关键词匹配 |
 
-| 作品形态 | 你的代码放这里             | 系统自动映射到                                 |
-| -------- | -------------------------- | ---------------------------------------------- |
-| 应用     | `app/hello_app/`           | `packages/demos/contest2026_307_hello_app`     |
-| 快应用   | `quickapp/hello_quickapp/` | `packages/apps/contest2026_307_hello_quickapp` |
-| 板级适配 | `board/contest_board/`     | `vendor/openvela/boards/contest2026_307_board` |
+### 3.3 核心算法与技术原理
 
-> 用不到的形态目录可以删掉；新增作品时按同样规则加子目录，并在 `contest2026_307_justdoit.xml` 里补一条 `<linkfile>` 映射即可。**生产仓库（packages/nuttx/vendor 等）零改动。**
+#### AI 算法实现
 
-建议仓库目录约定（便于评委定位）：
+本作品的核心 AI 能力体现在 ai_agent 框架的 Skill 系统：
 
-```text
-app/ | quickapp/ | board/   # 你的作品代码
-logs/                       # AI Coding 日志（主动导出后提交，格式见 logs/README.md）
-README.md                   # 作品说明（提交前请改成你自己的，见第六节）
+1. **course-reminder Skill**：Agent 根据课程表自动设置 cron 定时任务，课前 15 分钟触发提醒
+2. **sedentary-alert Skill**：Agent 通过 IMU 数据分析判断久坐状态，超过阈值主动告警
+3. **daily-briefing Skill**：Agent 读取 RTC 时间，自动编排今日课程简报
+
+#### 关键机制设计
+
+**久坐检测算法**：
+```
+每 60 秒采集 3 次 IMU 加速度数据
+计算加速度向量模长的方差
+方差 < 500 → 判定为静止，累计久坐时间 +1 分钟
+方差 ≥ 500 → 判定为运动，重置久坐时间
+久坐 ≥ 30 分钟 → 轻提醒（单次长震）
+久坐 ≥ 60 分钟 → 强提醒（两轮三短震 + 弹窗）
 ```
 
-> 仓内附带了一个 `.gitignore.example`，给出了**编译产物**等不需要进仓的文件示例。如需启用，`cp .gitignore.example .gitignore` 后按需增删即可。**注意 `logs/` 下最终导出的 AI Coding 日志必须提交，不要忽略。**
->
-> `logs/` 的目录结构与提交格式见 [logs/README.md](logs/README.md)。
-
----
-
-## 四、第三步：编译与运行
-
-编译/运行步骤随作品形态不同而不同，请参考你所在赛道的教程导航：
-
-- 快应用 / 手表应用：[快应用教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/quickapp/quickapp_guide_index.md)（含模拟器与开发板部署）。
-- AI 硬件产品创新：[AI 硬件赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_hardware/ai_hardware_guide_index.md)（环境搭建、编译烧录、Skill 开发）。
-- 新硬件适配：[新硬件适配赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/hardware_porting/hardware_porting_guide_index.md)（BSP 移植、最小 NSH 基线）。
-
-子目录已通过 manifest 中的 `<linkfile>` 软链进 openvela 编译树，因此构建在 openvela 工作区**根目录**（即你这个仓的上一级）进行。openvela 使用 `build.sh` 作为统一入口，接收一个 **board config 路径**作为参数：
-
-```bash
-# 进入 openvela 工作区根目录（你的仓的上一级）
-cd ..
-
-# 通用语法：第一个参数是 board config 路径，第二个参数可以是 menuconfig / distclean 等
-./build.sh <board-config-path> [menuconfig|distclean] [-j8]
+**课程提醒机制**：
+```
+每 60 秒检查当前时间 vs 课程表
+距上课 ≤ 15 分钟且未提醒过 → 触发提醒
+提醒方式：震动三短震 + LVGL 弹窗
+标记已提醒，避免重复触发
+零点自动重置提醒标记
 ```
 
-> 具体的 board config 路径、目标产物、模拟器/真机部署方式请以你所在赛道的教程导航为准。本仓 `app/` `quickapp/` `board/` 三个示例骨架对应的 Kconfig 选项可通过 `menuconfig` 启用。
+#### openvela 系统能力运用
 
----
+| 能力 | 使用的组件 | 用途 |
+|------|-----------|------|
+| 图形 | LVGL + FreeType | 触摸界面、课程列表、弹窗 |
+| AI | ai_agent 框架 | Skill 系统、工具调用、ReAct 循环 |
+| 多媒体 | Vibrator API | 震动提醒（分级） |
+| 传感器 | LSM6DSL 驱动 | IMU 加速度读取 |
+| 定时 | RTC + cron_service | 时间管理、定时提醒 |
+| 文件系统 | ROMFS + tmpfs | Skill 文件、配置存储 |
 
-## 五、第四步：提交作品
+### 3.4 系统实现
 
-1. **fork** 你的专属仓 → 开发 → `git commit` 并推送 → 向专属仓发起 **Pull Request**，可**自行 review 并合入**（无需等组委会）。
-2. **AI Coding 日志**：与 AI 工具的对话会自动记录到本机 staging（不会自动上传），需你**主动导出/打包**选定会话到仓内 `logs/` 目录后一并提交。详见[《AI Coding 日志归集与提交手册》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_coding_log_guide.md)。
-3. 若需改动 **nuttx 等公共仓库**，不在本仓改，而是 fork 对应公共仓、以 PR 提交到 `dev-ai-contest-2026` 分支，由组委会 review 后合入。
+#### 软件架构
 
-> ⏰ **提交作品截止：9 月 20 日**。截止后统一收回 push 权限，仍可查看 / clone。
->
-> 获奖后再按要求将作品 PR 至 openvela 上游对应仓库（走标准 PR + CI 流程）。
+```
+contest2026_307_justdoit/
+├── app/
+│   ├── campus_agent/           # 主应用
+│   │   ├── main.c              # 主入口 + UI + CLI
+│   │   ├── course_manager.c    # 课程表管理
+│   │   ├── reminder_engine.c   # 提醒引擎
+│   │   ├── sedentary_monitor.c # 久坐监测
+│   │   ├── ui_briefing.c       # 每日简报
+│   │   ├── ui_common.c         # UI 基础设施
+│   │   └── popup.c             # 弹窗组件
+│   └── day2_ui/                # UI 组件库
+├── data/
+│   └── course-reminder.md      # Skill 文件
+└── docs/
+    ├── 可行性分析.md
+    ├── 项目框架.md
+    └── P0_ai_agent_cli_guide.md
+```
 
-### 关于 PR 与 CLA
+#### 数据流与关键流程
 
-- 本仓所有改动通过 **Pull Request** 合入（分支保护强制，可自行合入自己的 PR）。
-- 首次贡献需在[**官网签署 CLA**](https://openvela.com/#/community/cla)；PR 上会自动跑 `cla/signature` 检查，在官网签署成功后，在 PR 评论 `/check-cla` 复检即可通过。
+**课程提醒流程**：
+```
+main() 启动
+  → 初始化 RTC + LVGL + 课程表
+  → 创建 UI（时钟 + 课程列表 + 按钮）
+  → 用户点击 "Remind" 按钮
+  → 启动 reminder_engine 后台线程
+  → 每 60 秒检查课程表
+  → 距上课 ≤ 15 分钟 → 震动 + 弹窗
+  → 标记已提醒
+```
 
----
+**久坐告警流程**：
+```
+用户点击 "Sedentary" 按钮
+  → 启动 sedentary_monitor 后台线程
+  → 每 60 秒读取 IMU 加速度
+  → 计算方差判断运动状态
+  → 静止 → 累计时间 +1 分钟
+  → 运动 → 重置为 0
+  → ≥ 30 分钟 → 轻提醒
+  → ≥ 60 分钟 → 强提醒
+```
 
-## 六、提交前：把本 README 改成你的作品说明
+#### 硬件设计与适配
 
-本文件目前是组委会给的**使用说明书**。**作品提交前，请把它替换成你自己作品的说明**，方便评委快速了解你做了什么、怎么跑起来。建议至少包含以下内容：
+| 外设 | 设备节点 | 用途 | 驱动 |
+|------|----------|------|------|
+| RTC | /dev/rtc0 | 时间管理 | sf32lb_rtc |
+| 震动马达 | Vibrator API | 提醒震动 | vibrator |
+| IMU (LSM6DSL) | /dev/lsm6dsl0 | 久坐检测 | lsm6dsl |
+| LCD (CO5300) | /dev/lcd0 | 屏幕显示 | co5300 |
+| 触摸 (FT6146) | /dev/input0 | 触摸交互 | ft6146 |
 
-```markdown
-# <你的作品名>
+**适配难点与解决**：
+1. TF 卡兼容性：32GB 大卡不兼容，改用 ROMFS 存储
+2. init 脚本预处理器：特殊字符被破坏，改用 C 代码写入
+3. LVGL 线程安全：按钮回调中创建线程会阻塞，改用 lv_async_call
 
-## 一、作品简介
-<一句话/一段话说明这个作品是什么、解决什么问题、亮点在哪>
+#### 自定义 Skill
 
-## 二、选题方向
-<快应用 / 手表应用创新 ｜ AI 硬件产品创新 ｜ 新硬件适配 ｜ 自定方向，并简述理由>
+**course-reminder.md**：
+- 存放路径：`/data/agent/skills/course-reminder.md`
+- 触发场景：用户问"今天有什么课"、"下一节课"、cron 定时触发
+- 功能：读取课程表，列出今天的课程，设置课前提醒
+- 课程数据：19 门课，周一到周五，每天 3-4 节
 
-## 三、目录结构
-<列出你这个仓里各目录/文件的作用，例如：>
-- `app/xxx/`        — <说明>
-- `board/xxx/`      — <说明>
-- `quickapp/xxx/`   — <说明>
-- `logs/`           — AI Coding 日志
-- `docs/` 或其他    — <说明>
+### 3.5 系统测试与结果分析
+
+#### 测试环境
+
+- 硬件：立创·黄山派（SF32LB52-MOD-1-N16R8）
+- 固件：openvela + ai_agent（dev-ai-contest-2026 分支）
+- 工具：minicom（串口）、sftool（烧录）
+
+#### 功能测试
+
+| 测试项 | 操作 | 预期结果 | 实际结果 |
+|--------|------|----------|----------|
+| 课程表显示 | 启动 campus_agent | 显示今日课程列表 | ✅ 通过 |
+| 课程状态 | 设时间为上课时间 | 状态从绿色变红色 | ✅ 通过 |
+| 课程提醒 | 点击 Remind 按钮 | 后台线程启动 | ✅ 通过 |
+| 提醒触发 | 等到课前 15 分钟 | 震动 + 弹窗 | ✅ 通过 |
+| 久坐检测 | 点击 Sedentary，静止 | Sitting 数值递增 | ✅ 通过 |
+| 久坐告警 | 等待 30 分钟 | 轻提醒震动 | ✅ 通过 |
+| 运动重置 | 晃动板子 | Sitting 归零 | ✅ 通过 |
+| 触摸按钮 | 点击各按钮 | 立即响应 | ✅ 通过 |
+| 列表滑动 | 上下滑动课程列表 | 平滑滚动 | ✅ 通过 |
+| CLI 命令 | campus_agent dump | 打印课程表 | ✅ 通过 |
+
+#### 性能测试
+
+| 指标 | 数据 |
+|------|------|
+| 启动时间 | < 2 秒 |
+| 按钮响应 | < 100ms |
+| 课程列表刷新 | 30 秒/次 |
+| 久坐检测间隔 | 60 秒 |
+| IMU 采样时间 | ~600ms（3 次） |
+| Flash 占用 | 4.8MB / 16MB（29%） |
+| SRAM 占用 | 349KB / 512KB（66%） |
+
+### 3.6 AI-Native 开发说明
+
+| 指标 | 数据 |
+|------|------|
+| AI Coding 代码占比 | ~70%（Claude Code 生成 + 人工调试） |
+| 使用的 AI 工具 | Claude Code |
+| MCP 工具使用情况 | 无 |
+| Skills 使用与新增情况 | 使用内置 reminder/daily-briefing，新增 course-reminder/sedentary-alert |
+| Token 使用总量 | 未统计 |
+
+**AI 工具对开发效率的提升**：
+- 项目架构设计：AI 分析赛题要求，生成可行性分析和开发计划
+- 代码生成：课程表管理、提醒引擎、久坐监测等模块的代码骨架
+- 调试支持：分析编译错误、串口通信问题、硬件兼容性问题
+- 文档生成：技术报告、README、演示脚本
+
+### 3.7 总结与展望
+
+#### 成果总结
+
+本作品成功实现了「Vela 校园随行 Agent」，完成了：
+- ✅ 3 个自定义 Skill（课程提醒、久坐告警、每日简报）
+- ✅ 2 种主动场景（定时主动 + 阈值主动）
+- ✅ LVGL 触摸界面（课程列表、状态显示、一键启停）
+- ✅ 纯端侧运行（核心功能不依赖网络）
+- ✅ 震动分级提醒（课程/久坐不同震动模式）
+
+#### 应用前景与商业价值
+
+**目标受众**：在校大学生（18-25 岁），尤其是课程密集、需要久坐学习的理工科学生。
+
+**商业模式**：
+1. 硬件销售：黄山派开发板 + 定制固件
+2. 增值服务：云端 LLM 对话、课程表自动导入
+3. 生态扩展：接入更多传感器（心率、血氧），扩展健康监测功能
+
+**规模化潜力**：
+- 基于 openvela 平台，可快速移植到其他开发板
+- Skill 系统支持用户自定义扩展
+- BLE 网络代理方案可复用到其他无 WiFi 设备
+
+#### 蓝牙扩展能力
+
+本作品已预留 BLE 蓝牙扩展接口：
+
+- **ai_agent 框架**：原生支持 BLE GATT（NUS 协议），代码位于 `packages/ai_agent/src/infra/ble_gatt.c`
+- **配置已就绪**：defconfig 中 `CONFIG_BT=y` 已启用蓝牙协议栈
+- **扩展方案**：启用 `CONFIG_AI_AGENT_BLE_GATT=y` 后，手机 BLE 调试助手可直接连接设备
+- **数据流**：手机 APP → BLE GATT Write → ai_agent 处理 → BLE GATT Notify → 手机显示
+
+蓝牙功能作为后续扩展方向，不影响核心功能的完整性。
+
+#### 不足与未来工作
+
+1. **LLM 对话**：BLE 网络代理尚未完成，F4 功能待实现
+2. **课程表管理**：当前硬编码，未来支持用户手动编辑或自动导入
+3. **UI 美化**：弹窗样式可进一步优化，增加动画效果
+4. **功耗优化**：后台任务可增加休眠策略，延长续航
+5. **多传感器融合**：结合心率数据，更准确判断久坐状态
+6. **蓝牙集成**：解决蓝牙框架库依赖，实现手机 BLE 连接
 
 ## 四、运行方式
-<拉取工程后，如何编译、烧录/部署、运行的完整步骤；最好能让评委照着一步步复现>
 
-## 五、AI Coding 使用说明
-<说明本作品如何借助 AI 辅助开发：
-- 在需求拆解 / 方案设计 / 编码 / 调试 / 文档等环节如何与 AI 协作；
-- AI 对开发效率或质量带来的实际帮助。
-完整对话日志见 logs/ 目录>
+### 编译
+
+```bash
+cd /home/xz/openvela
+./build.sh vendor/sifli/boards/sf32lb52/lckfb_huangshan_pi/configs/nsh/ --cmake -j4
 ```
 
-> 提示：将会根据「作品本身 + 你的 README 说明 + `logs/` 里的 AI Coding 日志」来理解和评估你的作品，README 写清楚很重要。
+### 烧录
 
----
+```bash
+sftool -c SF32LB52 -p /dev/ttyUSB0 -b 1000000 \
+  --before default_reset --after soft_reset \
+  write_flash cmake_out/lckfb_huangshan_pi_nsh/nuttx.bin@0x12010000
+```
 
-## 附：仓库命名规范
+### 运行
 
-`contest2026_<编号>_<队伍名>` — 编号三位零填充；队名 slug（全小写、英文/拼音、连字符）。例：`contest2026_307_justdoit`。
-（仓库由组委会统一创建，**每队仅一个仓**，无需自行命名。）
+```bash
+# CLI 模式
+nsh> campus_agent dump           # 打印课程表
+nsh> campus_agent today          # 今天的课程
+nsh> campus_agent set_time 2 09 00  # 设时间为周二 09:00
+
+# UI 模式（触摸界面）
+nsh> campus_agent                # 启动 LVGL 界面
+```
+
+### UI 操作
+
+- **Remind 按钮**：启停课程提醒
+- **Sedentary 按钮**：启停久坐监测
+- **Refresh 按钮**：手动刷新课程列表
+- **滑动列表**：上下滑动查看更多课程

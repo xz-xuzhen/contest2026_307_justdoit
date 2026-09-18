@@ -1,0 +1,3 @@
+ifneq ($(CONFIG_LVX_CONTEST2026_307_CAMPUS_AGENT),)
+CONFIGURED_APPS += $(APPDIR)/packages/demos/contest2026_307_campus_agent
+endif

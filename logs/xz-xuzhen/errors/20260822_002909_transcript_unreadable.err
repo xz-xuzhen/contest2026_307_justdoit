@@ -1,0 +1,12 @@
+{
+  "ts": "2026-08-21T16:29:09.215Z",
+  "kind": "transcript_unreadable",
+  "tool": "claude-code",
+  "team_id": "contest2026_307_justdoit",
+  "version": "1.3.0",
+  "context": {
+    "tool": "claude-code",
+    "transcript_path": "/home/xz/.claude/projects/-home-xz-openvela/89ba8a4d-24d5-471c-b140-10d7da87301e.jsonl"
+  },
+  "message": "cannot read or parse transcript at /home/xz/.claude/projects/-home-xz-openvela/89ba8a4d-24d5-471c-b140-10d7da87301e.jsonl"
+}

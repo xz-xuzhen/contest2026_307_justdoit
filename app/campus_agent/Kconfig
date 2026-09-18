@@ -1,0 +1,49 @@
+#
+# Campus Agent - Vela校园随行Agent
+# Contest 2026 Team 307
+#
+
+config LVX_CONTEST2026_307_CAMPUS_AGENT
+	bool "Campus Agent (course reminder + sedentary alert)"
+	default n
+	depends on GRAPHICS_LVGL
+	depends on RTC
+	depends on SENSORS
+	depends on PWM
+	---help---
+		Campus companion agent with course reminders,
+		sedentary alerts, and daily briefing.
+
+if LVX_CONTEST2026_307_CAMPUS_AGENT
+
+config LVX_CONTEST2026_307_CAMPUS_AGENT_PROGNAME
+	string "Program name"
+	default "campus_agent"
+
+config LVX_CONTEST2026_307_CAMPUS_AGENT_PRIORITY
+	int "Task priority"
+	default 100
+
+config LVX_CONTEST2026_307_CAMPUS_AGENT_STACKSIZE
+	int "Stack size"
+	default 65536
+
+config LVX_CONTEST2026_307_BLE_UART
+	bool "BLE UART transparent transmission"
+	default y
+	depends on BT
+	---help---
+		BLE GATT NUS UART transparent transmission.
+		Allows phone to connect via BLE and send/receive data.
+
+if LVX_CONTEST2026_307_BLE_UART
+
+config LVX_CONTEST2026_307_BLE_UART_NAME
+	string "BLE device name"
+	default "CampusAgent"
+	---help---
+		Device name shown during BLE advertising.
+
+endif
+
+endif
